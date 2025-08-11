@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { 
   BarChart3, 
@@ -14,13 +15,20 @@ import { cn } from "@/lib/utils";
 
 const Navigation = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
 
   const navItems = [
-    { icon: BarChart3, label: "Dashboard", active: true },
-    { icon: TrendingUp, label: "Stocks", active: false },
-    { icon: PieChart, label: "Mutual Funds", active: false },
-    { icon: Settings, label: "Settings", active: false },
+    { icon: BarChart3, label: "Dashboard", path: "/", active: location.pathname === "/" },
+    { icon: TrendingUp, label: "Stocks", path: "/stocks", active: location.pathname.startsWith("/stocks") },
+    { icon: PieChart, label: "Portfolio", path: "/portfolio", active: location.pathname.startsWith("/portfolio") },
+    { icon: Settings, label: "Settings", path: "/settings", active: location.pathname.startsWith("/settings") },
   ];
+
+  const handleNavigation = (path: string) => {
+    navigate(path);
+    setIsOpen(false);
+  };
 
   return (
     <>
@@ -41,7 +49,7 @@ const Navigation = () => {
       )}>
         <div className="p-6">
           {/* Logo */}
-          <div className="flex items-center gap-3 mb-8">
+          <div className="flex items-center gap-3 mb-8 cursor-pointer" onClick={() => handleNavigation("/")}>
             <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
               <BarChart3 className="w-5 h-5 text-white" />
             </div>
@@ -60,6 +68,7 @@ const Navigation = () => {
                   "w-full justify-start gap-3 h-12",
                   item.active && "gradient-primary shadow-glow"
                 )}
+                onClick={() => handleNavigation(item.path)}
               >
                 <item.icon className="w-5 h-5" />
                 {item.label}
