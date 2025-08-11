@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,10 +10,13 @@ import {
   Star,
   PieChart,
   BarChart3,
-  DollarSign
+  DollarSign,
+  X
 } from "lucide-react";
 import { apiClient } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import AddHoldingModal from "@/components/AddHoldingModal";
+import AddToWatchlistModal from "@/components/AddToWatchlistModal";
 
 const Portfolio = () => {
   const { data: portfolios, isLoading: portfoliosLoading } = useQuery({
@@ -24,6 +27,15 @@ const Portfolio = () => {
   const { data: watchlist, isLoading: watchlistLoading } = useQuery({
     queryKey: ['watchlist'],
     queryFn: () => apiClient.getWatchlist(),
+  });
+
+  const queryClient = useQueryClient();
+
+  const removeFromWatchlistMutation = useMutation({
+    mutationFn: (stockSymbol: string) => apiClient.removeFromWatchlist(stockSymbol),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['watchlist'] });
+    },
   });
 
   const formatPrice = (price: number) => {
@@ -63,10 +75,7 @@ const Portfolio = () => {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Portfolio</h1>
-        <Button>
-          <Plus className="w-4 h-4 mr-2" />
-          Add Holding
-        </Button>
+        <AddHoldingModal />
       </div>
 
       <Tabs defaultValue="overview" className="space-y-6">
@@ -183,9 +192,18 @@ const Portfolio = () => {
                           </p>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <div className="font-semibold">{formatPrice(holding.current_price)}</div>
-                        {formatChange(holding.change)}
+                      <div className="flex items-center space-x-4">
+                        <div className="text-right">
+                          <div className="font-semibold">{formatPrice(holding.current_price)}</div>
+                          {formatChange(holding.change)}
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-muted-foreground hover:text-destructive"
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
                       </div>
                     </div>
                   ))}
@@ -195,10 +213,14 @@ const Portfolio = () => {
                   <PieChart className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                   <h3 className="text-lg font-semibold mb-2">No holdings yet</h3>
                   <p className="text-muted-foreground mb-4">Start building your portfolio by adding some stocks</p>
-                  <Button>
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Your First Holding
-                  </Button>
+                  <AddHoldingModal 
+                    trigger={
+                      <Button>
+                        <Plus className="w-4 h-4 mr-2" />
+                        Add Your First Holding
+                      </Button>
+                    }
+                  />
                 </div>
               )}
             </CardContent>
@@ -240,9 +262,20 @@ const Portfolio = () => {
                           <p className="text-sm text-muted-foreground">{item.name}</p>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <div className="font-semibold">{formatPrice(item.price)}</div>
-                        {formatChange(item.change)}
+                      <div className="flex items-center space-x-4">
+                        <div className="text-right">
+                          <div className="font-semibold">{formatPrice(item.price)}</div>
+                          {formatChange(item.change)}
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeFromWatchlistMutation.mutate(item.symbol)}
+                          disabled={removeFromWatchlistMutation.isPending}
+                          className="text-muted-foreground hover:text-destructive"
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
                       </div>
                     </div>
                   ))}
@@ -252,10 +285,14 @@ const Portfolio = () => {
                   <Star className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                   <h3 className="text-lg font-semibold mb-2">Watchlist is empty</h3>
                   <p className="text-muted-foreground mb-4">Add stocks to your watchlist to track them</p>
-                  <Button>
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add to Watchlist
-                  </Button>
+                  <AddToWatchlistModal 
+                    trigger={
+                      <Button>
+                        <Plus className="w-4 h-4 mr-2" />
+                        Add to Watchlist
+                      </Button>
+                    }
+                  />
                 </div>
               )}
             </CardContent>
