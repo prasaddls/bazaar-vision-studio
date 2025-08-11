@@ -96,6 +96,20 @@ class ApiClient {
     });
   }
 
+  async forgotPassword(email: string) {
+    return this.request<{ message: string; note?: string }>('/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+  }
+
+  async resetPassword(token: string, newPassword: string) {
+    return this.request<{ message: string; note?: string }>('/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ token, newPassword }),
+    });
+  }
+
   // Market Data
   async getMarketOverview() {
     return this.request<{

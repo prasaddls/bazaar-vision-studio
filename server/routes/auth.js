@@ -275,4 +275,76 @@ router.put('/change-password', [
   }
 });
 
+// Forgot password - send reset email (simulated)
+router.post('/forgot-password', [
+  body('email').isEmail().withMessage('Valid email is required')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const { email } = req.body;
+    const db = getDatabase();
+
+    // Check if user exists
+    const user = await db.get(
+      'SELECT id, username FROM users WHERE email = ? AND is_active = 1',
+      [email]
+    );
+
+    if (!user) {
+      // For security reasons, don't reveal if email exists or not
+      return res.json({ message: 'If an account with that email exists, a password reset link has been sent.' });
+    }
+
+    // In a real application, you would:
+    // 1. Generate a secure reset token
+    // 2. Store it in the database with expiration
+    // 3. Send an email with the reset link
+    // 4. Use a proper email service (SendGrid, AWS SES, etc.)
+
+    // For demo purposes, we'll just return success
+    res.json({ 
+      message: 'Password reset email sent successfully',
+      note: 'This is a demo application. In production, you would receive an actual email.'
+    });
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    res.status(500).json({ error: 'Failed to process password reset request' });
+  }
+});
+
+// Reset password with token (simulated)
+router.post('/reset-password', [
+  body('token').notEmpty().withMessage('Reset token is required'),
+  body('newPassword').isLength({ min: 6 }).withMessage('New password must be at least 6 characters')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const { token, newPassword } = req.body;
+    const db = getDatabase();
+
+    // In a real application, you would:
+    // 1. Verify the reset token from the database
+    // 2. Check if it's expired
+    // 3. Update the user's password
+    // 4. Invalidate the used token
+
+    // For demo purposes, we'll just return success
+    res.json({ 
+      message: 'Password reset successfully',
+      note: 'This is a demo application. In production, the token would be validated and the password would be updated.'
+    });
+  } catch (error) {
+    console.error('Reset password error:', error);
+    res.status(500).json({ error: 'Failed to reset password' });
+  }
+});
+
 export default router;
