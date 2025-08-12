@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import Navigation from "@/components/Navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -82,7 +83,10 @@ const Stocks = () => {
   const filteredStocks = getFilteredStocks();
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="min-h-screen bg-background">
+      <Navigation />
+      
+      <main className="md:ml-64 p-6 space-y-6">
       <div className="flex flex-col gap-4">
         <h1 className="text-3xl font-bold">Stocks</h1>
         
@@ -160,7 +164,7 @@ const Stocks = () => {
                   
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">Change</span>
-                    {formatChange(stock.change)}
+                    {formatChange(stock.change_percent || stock.change || 0)}
                   </div>
                   
                   <div className="flex justify-between items-center">
@@ -181,6 +185,7 @@ const Stocks = () => {
           <p className="text-muted-foreground">Try adjusting your search or filters</p>
         </div>
       )}
+      </main>
     </div>
   );
 };

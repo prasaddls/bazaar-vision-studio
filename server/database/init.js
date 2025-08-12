@@ -228,6 +228,40 @@ async function insertInitialData() {
       `, rec);
     }
 
+    // Insert sample stock prices for the stocks
+    const stockPrices = [
+      // RELIANCE
+      [1, 2850.50, 45.20, 1.61, 12500000, 2900.00, 2800.00, 2855.00, 2850.50],
+      // TCS
+      [2, 3850.75, 125.30, 3.36, 8500000, 3900.00, 3820.00, 3875.00, 3850.75],
+      // INFY
+      [3, 1950.25, -45.80, -2.29, 12000000, 2000.00, 1940.00, 1996.05, 1950.25],
+      // HDFC
+      [4, 1650.80, 25.40, 1.56, 9500000, 1670.00, 1630.00, 1625.40, 1650.80],
+      // ICICIBANK
+      [5, 1200.45, -35.20, -2.85, 15000000, 1230.00, 1190.00, 1235.65, 1200.45],
+      // ITC
+      [6, 450.90, 12.30, 2.80, 8000000, 455.00, 448.00, 438.60, 450.90],
+      // SBIN
+      [7, 750.25, -15.80, -2.06, 18000000, 765.00, 745.00, 766.05, 750.25],
+      // BHARTIARTL
+      [8, 1250.60, 85.40, 7.32, 6500000, 1280.00, 1240.00, 1165.20, 1250.60],
+      // AXISBANK
+      [9, 980.75, -22.50, -2.24, 11000000, 1000.00, 975.00, 1003.25, 980.75],
+      // ASIANPAINT
+      [10, 3200.40, 45.60, 1.45, 4500000, 3220.00, 3180.00, 3154.80, 3200.40]
+    ];
+
+    // Clear existing stock prices first
+    await db.run('DELETE FROM stock_prices');
+    
+    for (const price of stockPrices) {
+      await db.run(`
+        INSERT INTO stock_prices (stock_id, price, change_amount, change_percent, volume, high, low, open_price, close_price)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, price);
+    }
+
     console.log('Initial data inserted successfully');
   } catch (error) {
     console.error('Error inserting initial data:', error);

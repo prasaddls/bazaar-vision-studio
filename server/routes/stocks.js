@@ -107,7 +107,138 @@ router.get('/search', async (req, res) => {
   }
 });
 
-// Get stock by symbol
+// Get top gainers - MUST BE BEFORE /:symbol route
+router.get('/top/gainers', async (req, res) => {
+  try {
+    const { limit = 10 } = req.query;
+    const db = getDatabase();
+
+    const gainers = await db.all(`
+      SELECT 
+        s.symbol,
+        s.name,
+        s.sector,
+        sp.price,
+        sp.change_amount,
+        sp.change_percent,
+        sp.volume,
+        s.market_cap
+      FROM stocks s
+      LEFT JOIN stock_prices sp ON s.id = sp.stock_id
+      WHERE sp.change_percent > 0
+        AND sp.timestamp = (
+          SELECT MAX(timestamp) FROM stock_prices WHERE stock_id = s.id
+        )
+      ORDER BY sp.change_percent DESC
+      LIMIT ?
+    `, [parseInt(limit)]);
+
+    res.json({ stocks: gainers });
+  } catch (error) {
+    console.error('Get top gainers error:', error);
+    res.status(500).json({ error: 'Failed to get top gainers' });
+  }
+});
+
+// Get top losers - MUST BE BEFORE /:symbol route
+router.get('/top/losers', async (req, res) => {
+  try {
+    const { limit = 10 } = req.query;
+    const db = getDatabase();
+
+    const losers = await db.all(`
+      SELECT 
+        s.symbol,
+        s.name,
+        s.sector,
+        sp.price,
+        sp.change_amount,
+        sp.change_percent,
+        sp.volume,
+        s.market_cap
+      FROM stocks s
+      LEFT JOIN stock_prices sp ON s.id = sp.stock_id
+      WHERE sp.change_percent < 0
+        AND sp.timestamp = (
+          SELECT MAX(timestamp) FROM stock_prices WHERE stock_id = s.id
+        )
+      ORDER BY sp.change_percent ASC
+      LIMIT ?
+    `, [parseInt(limit)]);
+
+    res.json({ stocks: losers });
+  } catch (error) {
+    console.error('Get top losers error:', error);
+    res.status(500).json({ error: 'Failed to get top losers' });
+  }
+});
+
+// Get most active stocks - MUST BE BEFORE /:symbol route
+router.get('/most-active', async (req, res) => {
+  try {
+    const { limit = 10 } = req.query;
+    const db = getDatabase();
+
+    // First, let's check if we have any stock prices
+    const priceCount = await db.get('SELECT COUNT(*) as count FROM stock_prices');
+    console.log('Stock prices count:', priceCount.count);
+
+    if (priceCount.count === 0) {
+      return res.json({ stocks: [] });
+    }
+
+    const mostActive = await db.all(`
+      SELECT 
+        s.symbol,
+        s.name,
+        s.sector,
+        sp.price,
+        sp.change_amount,
+        sp.change_percent,
+        sp.volume,
+        s.market_cap
+      FROM stocks s
+      INNER JOIN stock_prices sp ON s.id = sp.stock_id
+      ORDER BY sp.volume DESC
+      LIMIT ?
+    `, [parseInt(limit)]);
+
+    console.log('Most active stocks found:', mostActive.length);
+    res.json({ stocks: mostActive });
+  } catch (error) {
+    console.error('Get most active stocks error:', error);
+    res.status(500).json({ error: 'Failed to get most active stocks' });
+  }
+});
+
+// Debug endpoint to check database state
+router.get('/debug/state', async (req, res) => {
+  try {
+    const db = getDatabase();
+    
+    const stockCount = await db.get('SELECT COUNT(*) as count FROM stocks');
+    const priceCount = await db.get('SELECT COUNT(*) as count FROM stock_prices');
+    
+    const sampleStocks = await db.all('SELECT id, symbol, name FROM stocks LIMIT 3');
+    const samplePrices = await db.all('SELECT stock_id, price, volume FROM stock_prices LIMIT 3');
+    
+    res.json({
+      stocks: {
+        total: stockCount.count,
+        sample: sampleStocks
+      },
+      prices: {
+        total: priceCount.count,
+        sample: samplePrices
+      }
+    });
+  } catch (error) {
+    console.error('Debug error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get stock by symbol - MUST BE AFTER specific routes
 router.get('/:symbol', async (req, res) => {
   try {
     const { symbol } = req.params;
@@ -193,7 +324,7 @@ router.get('/:symbol', async (req, res) => {
   }
 });
 
-// Get stock price history
+// Get stock price history - MUST BE AFTER /:symbol route
 router.get('/:symbol/history', async (req, res) => {
   try {
     const { symbol } = req.params;
@@ -245,104 +376,6 @@ router.get('/:symbol/history', async (req, res) => {
   } catch (error) {
     console.error('Get stock history error:', error);
     res.status(500).json({ error: 'Failed to get stock history' });
-  }
-});
-
-// Get top gainers
-router.get('/top/gainers', async (req, res) => {
-  try {
-    const { limit = 10 } = req.query;
-    const db = getDatabase();
-
-    const gainers = await db.all(`
-      SELECT 
-        s.symbol,
-        s.name,
-        s.sector,
-        sp.price,
-        sp.change_amount,
-        sp.change_percent,
-        sp.volume,
-        s.market_cap
-      FROM stocks s
-      LEFT JOIN stock_prices sp ON s.id = sp.stock_id
-      WHERE sp.change_percent > 0
-        AND sp.timestamp = (
-          SELECT MAX(timestamp) FROM stock_prices WHERE stock_id = s.id
-        )
-      ORDER BY sp.change_percent DESC
-      LIMIT ?
-    `, [parseInt(limit)]);
-
-    res.json({ gainers });
-  } catch (error) {
-    console.error('Get top gainers error:', error);
-    res.status(500).json({ error: 'Failed to get top gainers' });
-  }
-});
-
-// Get top losers
-router.get('/top/losers', async (req, res) => {
-  try {
-    const { limit = 10 } = req.query;
-    const db = getDatabase();
-
-    const losers = await db.all(`
-      SELECT 
-        s.symbol,
-        s.name,
-        s.sector,
-        sp.price,
-        sp.change_amount,
-        sp.change_percent,
-        sp.volume,
-        s.market_cap
-      FROM stocks s
-      LEFT JOIN stock_prices sp ON s.id = sp.stock_id
-      WHERE sp.change_percent < 0
-        AND sp.timestamp = (
-          SELECT MAX(timestamp) FROM stock_prices WHERE stock_id = s.id
-        )
-      ORDER BY sp.change_percent ASC
-      LIMIT ?
-    `, [parseInt(limit)]);
-
-    res.json({ losers });
-  } catch (error) {
-    console.error('Get top losers error:', error);
-    res.status(500).json({ error: 'Failed to get top losers' });
-  }
-});
-
-// Get most active stocks
-router.get('/most-active', async (req, res) => {
-  try {
-    const { limit = 10 } = req.query;
-    const db = getDatabase();
-
-    const mostActive = await db.all(`
-      SELECT 
-        s.symbol,
-        s.name,
-        s.sector,
-        sp.price,
-        sp.change_amount,
-        sp.change_percent,
-        sp.volume,
-        s.market_cap
-      FROM stocks s
-      LEFT JOIN stock_prices sp ON s.id = sp.stock_id
-      WHERE sp.timestamp = (
-        SELECT MAX(timestamp) FROM stock_prices WHERE stock_id = s.id
-      )
-      ORDER BY sp.volume DESC
-      LIMIT ?
-    `, [parseInt(limit)]);
-
-    res.json({ mostActive });
-  } catch (error) {
-    console.error('Get most active stocks error:', error);
-    res.status(500).json({ error: 'Failed to get most active stocks' });
   }
 });
 
